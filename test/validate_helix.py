@@ -1,5 +1,8 @@
 #! /usr/bin/python
 
+## simply propagates a particle through a uniform B field and compares
+## the computed trajectory to the predicted helix
+
 import numpy as np
 import matplotlib.pyplot as plt
 import math

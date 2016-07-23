@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+## Test script to show how to generate particles from a random distribution,
+## propagate throught the magnetic field, and simulate their incidence
+## on an external Milliqan detector.
+
+## For the purposes of visualization, the external detector has been moved
+## much closer and enlarged to a 3m x 3m square.
+
 import math
 import os.path
 import numpy as np
@@ -10,45 +17,50 @@ import Integrator
 import Detector
 import Drawing
 
-# VIS or STATS
+# do you want to VISualize, or collect STATS?
 mode = "STATS"
-visWithStats = True
 
 if mode=="VIS":
-    ntrajs = 15
+    ntrajs = 10
     trajs = []
 if mode=="STATS":
-    ntrajs = 5
+    # in STATS mode, this is the number of hits on the detector to generate
+    # the total number of trajectories simulated will be greater
+    ntrajs = 100
     trajs = []
 
-outname = "data/test"
+visWithStats = False
 
+outname = "../output_data/test.txt"
+
+# must run at the beginning of main script. Loads the B field map into memory
+Detector.LoadCoarseBField("../bfield/bfield_coarse.pkl")
+
+# turn on CMS magnetic field and PDG multiple scattering
 Params.BFieldType = 'cms'
 Params.MSCtype = 'pdg'
+# turn on dE/dx energy loss (Bethe-Bloch)
 Params.EnergyLossOn = True
-Params.UseFineBField = False
-Params.Q = 1.0
-Params.m = 105.
+# charge and mass of the particle. Q in units of electric charge, m in MeV
+Params.Q = 0.1
+Params.m = 52500.
+#suppress annoying warnings
 Params.SuppressStoppedWarning = True
-
-Detector.LoadCoarseBField("../B-integrator/bfield/bfield_coarse.pkl")
 
 # make sure numbers are new each run
 ROOT.gRandom.SetSeed(0)
 
-rootfile = ROOT.TFile("p_eta_dists/DY_CutPtSpect_v2.root")
+rootfile = ROOT.TFile("../p_eta_dist/kin_dist.MilliQ.UFO.14TeV.52.50.root")
+# this is a 1D pT distribution (taken from small-eta events)
 pt_dist = rootfile.Get("pt")
 
-for i in range(1,pt_dist.GetNbinsX()+1):
-        if pt_dist.GetBinContent(i) < 0:
-            pt_dist.SetBinContent(i,0)
 
 dt = 0.2
-nsteps = 700
+nsteps = 500  # 0.2 ns * c * 700 = 30 m maximum, more than enough
 
-# set up detector plane
+## set up detector plane
 
-# normal to the plane (x,0,z)
+# normal to the plane. Put it 9 m away on the x-axis
 normToDetect = np.array([9.0,0,0])
 # distance from origin to plane
 distToDetect = np.linalg.norm(normToDetect)
@@ -56,68 +68,76 @@ normToDetect = normToDetect/np.linalg.norm(normToDetect)
 
 #center point
 center = normToDetect*distToDetect
-# y-axis (in plane)
+# the detector definition requires 2 orthogonal unit vectors (v,w) in the
+# plane of the detector. This serves to orient the detector in space
+# and sets up a coordinate system that is used in the output
 detV = np.array([0,1,0])
-# another orthogonal vector to norm in plane ((normToDetect, detV, detW) form an ON basis)
 detW = np.cross(normToDetect,detV)
 
 detWidth = 3.0
 detHeight = 3.0
 
+# this dictionary is passed to the FindIntersection method below
 detectorDict = {"norm":normToDetect, "dist":distToDetect, "v":detV, 
                 "w":detW, "width":detWidth, "height":detHeight}
 
-# the four corners (for drawing)
+# the four corners (only for drawing)
 c1 = center + detW*detWidth/2 + detV*detHeight/2
 c2 = center + detW*detWidth/2 - detV*detHeight/2
 c3 = center - detW*detWidth/2 - detV*detHeight/2
 c4 = center - detW*detWidth/2 + detV*detHeight/2
 
 intersects = []
-
-stats = ROOT.TNtuple("stats","stats","q:p:pT:eta:phi:theta:thW:thV:w:v:pInt")
 ntotaltrajs = 0
 
 if mode=="STATS":
-    if os.path.isfile(outname+".txt"):
+    # if file already exists, check if we want to overwrite or append
+    if os.path.isfile(outname):
         ow = 'q'
         while ow not in 'yYnN':
             ow = raw_input("Overwrite file? (y/n) ")
         if ow in 'yY':
-            txtfile = open(outname+".txt",'w')
+            txtfile = open(outname,'w')
         else:
-            txtfile = open(outname+".txt",'a')
+            print "OK, appending"
+            txtfile = open(outname,'a')
     else:
-        txtfile = open(outname+".txt",'w')
+        txtfile = open(outname,'w')
     txtfile.close()
 
+# loop until we get ntrajs trajectories (VIS) or hits (STATS)
 while len(trajs)<ntrajs:
     magp = ROOT.Double(-1)
     eta = ROOT.Double(-1)
 
-    etalow =  -0.1
-    etahigh =  0.1
+    etalow =  -0.2
+    etahigh =  0.2
 
+    # draw random pT values from the distribution. Set minimum at 10 GeV
     while magp<10:
         magp = pt_dist.GetRandom()
 
+    # eta distribution is uniform for small eta
     eta = np.random.rand()*(etahigh-etalow) + etalow
 
     th = 2*np.arctan(np.exp(-eta))
     magp = magp/np.sin(th)
-    phimin, phimax =  -0.2,0.2
+    phimin, phimax =  -0.3,0.3
     phi = np.random.rand() * (phimax-phimin) + phimin
     Params.Q *= np.random.randint(2)*2 - 1
     phi *= Params.Q/abs(Params.Q)
 
+    # convert to cartesian momentum
     p = 1000*magp * np.array([np.sin(th)*np.cos(phi),np.sin(th)*np.sin(phi),np.cos(th)])
     x0 = np.array([0,0,0,p[0],p[1],p[2]])
-
-    traj = Integrator.rk4(x0, Integrator.traverseBField, dt, nsteps)
+    
+    # simulate until nsteps steps is reached, or the particle passes x=10
+    traj = Integrator.rk4(x0, Integrator.traverseBField, dt, nsteps, cutoff=10, cutoffaxis=0)
     ntotaltrajs += 1
     if mode=="VIS":
         trajs.append(traj)
 
+    # compute the intersection. Will return None if no intersection
     intersection, theta, thW, thV, pInt = Detector.FindIntersection(traj, detectorDict)
     if intersection is not None:
         intersects.append(intersection)
@@ -131,14 +151,8 @@ while len(trajs)<ntrajs:
                 trajs.append(0)
             w = np.dot(intersection, detW)
             v = np.dot(intersection, detV)
-            stats.Fill(Params.Q,magp,magp*np.sin(th),eta,phi,theta, thW, thV, w, v, pInt)
-            txtfile = open(outname+".txt",'a')
+            txtfile = open(outname,'a')
             txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\n".format(Params.Q,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,pInt))
-
-if mode=="STATS":
-    fid = ROOT.TFile(outname+".root","RECREATE")
-    stats.Write()
-    fid.Close()
 
 print "Efficiency:", float(len(intersects))/ntotaltrajs
 
