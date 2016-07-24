@@ -70,7 +70,7 @@ def traverseBField(t, x):
 
 
 # 4th order runge-kutta integrator
-def rk4(x0, update_func, dt, nsteps, cutoff=None, cutoffaxis=None):
+def rk4(x0, dt, nsteps, update_func=traverseBField,  cutoff=None, cutoffaxis=None):
     # x0 is a vector of initial values e.g. (x0,y0,z0,px0,py0,pz0)
     # update func is as in dx/dt = update_func(x,t)
     # return value is an N by nsteps+1 array, where N is the size of x0

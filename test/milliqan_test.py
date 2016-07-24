@@ -3,9 +3,25 @@
 ## Test script to show how to generate particles from a random distribution,
 ## propagate throught the magnetic field, and simulate their incidence
 ## on an external Milliqan detector.
-
+##
 ## For the purposes of visualization, the external detector has been moved
 ## much closer and enlarged to a 3m x 3m square.
+##
+## use mode "VIS" to generate a few trajectries and then visualize with matplotlib
+## use mode "STATS" to collect statistics on particle hits on the detector, and output
+## to a text file
+##
+## The output format is (Q,p,pT,eta,phi,theta,thetaW,thetaV,w,v,pInt), one per column
+##  -Q is the charge (program randomly chooses each to be pos/neg)
+##  -p/pT are the initial (transverse) momentum in MeV
+##  -eta/phi are the initial eta/phi of the particle
+##  -theta is the of incidence on the detector plane, w.r.t. the normal
+##  -w,v are coordinates in the detector plane, where (0,0) is the center.
+##  -thetaW, thetaV are the angles of incidence projected on the w,v directions
+##  -pInt is the momentum magnitude upon incidence with the detector plane
+##
+## The above variables are somewhat obscure and were used for testing/debugging.
+## To get more useful variables, run the tools/formatOutput.py script.
 
 import math
 import os.path
@@ -18,7 +34,7 @@ import Detector
 import Drawing
 
 # do you want to VISualize, or collect STATS?
-mode = "STATS"
+mode = "VIS"
 
 if mode=="VIS":
     ntrajs = 10
@@ -30,6 +46,11 @@ if mode=="STATS":
     trajs = []
 
 visWithStats = False
+
+try:
+    os.makedirs("../output_data")
+except:
+    pass
 
 outname = "../output_data/test.txt"
 
@@ -58,34 +79,12 @@ pt_dist = rootfile.Get("pt")
 dt = 0.2
 nsteps = 500  # 0.2 ns * c * 700 = 30 m maximum, more than enough
 
-## set up detector plane
-
-# normal to the plane. Put it 9 m away on the x-axis
-normToDetect = np.array([9.0,0,0])
-# distance from origin to plane
-distToDetect = np.linalg.norm(normToDetect)
-normToDetect = normToDetect/np.linalg.norm(normToDetect)
-
-#center point
-center = normToDetect*distToDetect
-# the detector definition requires 2 orthogonal unit vectors (v,w) in the
-# plane of the detector. This serves to orient the detector in space
-# and sets up a coordinate system that is used in the output
-detV = np.array([0,1,0])
-detW = np.cross(normToDetect,detV)
-
-detWidth = 3.0
-detHeight = 3.0
-
-# this dictionary is passed to the FindIntersection method below
-detectorDict = {"norm":normToDetect, "dist":distToDetect, "v":detV, 
-                "w":detW, "width":detWidth, "height":detHeight}
+## set up detector. This is a much closer and enlarged version of
+## the detector for illustrative purposes.
+detectorDict = Detector.getMilliqanDetector(distance=9.0, width=3.0)
 
 # the four corners (only for drawing)
-c1 = center + detW*detWidth/2 + detV*detHeight/2
-c2 = center + detW*detWidth/2 - detV*detHeight/2
-c3 = center - detW*detWidth/2 - detV*detHeight/2
-c4 = center - detW*detWidth/2 + detV*detHeight/2
+c1,c2,c3,c4 = Detector.getDetectorCorners(detectorDict)
 
 intersects = []
 ntotaltrajs = 0
@@ -132,7 +131,7 @@ while len(trajs)<ntrajs:
     x0 = np.array([0,0,0,p[0],p[1],p[2]])
     
     # simulate until nsteps steps is reached, or the particle passes x=10
-    traj = Integrator.rk4(x0, Integrator.traverseBField, dt, nsteps, cutoff=10, cutoffaxis=0)
+    traj = Integrator.rk4(x0, dt, nsteps, cutoff=10, cutoffaxis=0)
     ntotaltrajs += 1
     if mode=="VIS":
         trajs.append(traj)

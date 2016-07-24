@@ -60,6 +60,9 @@ def LoadFineBField(fnamex, fnamey=None, fnamez=None):
 
 def getMaterial(x,y,z):
 
+    if Params.MatSetup == 'air':
+        return 'air'
+
     if Params.MatSetup == 'iron':
         return 'fe'
 
@@ -212,8 +215,42 @@ def FindIntersection(traj, detectorDict):
     return None, None, None, None, None
 
 
+def getMilliqanDetector(distance=33.0, width=1.):
+    
+    # normal to the plane. Put it 9 m away on the x-axis
+    normToDetect = np.array([1,0,0])
+    # distance from origin to plane
+    distToDetect = distance
+    
+    #center point
+    center = normToDetect*distToDetect
+    # the detector definition requires 2 orthogonal unit vectors (v,w) in the
+    # plane of the detector. This serves to orient the detector in space
+    # and sets up a coordinate system that is used in the output
+    detV = np.array([0,1,0])
+    detW = np.cross(normToDetect,detV)
+    
+    detWidth = width
+    detHeight = width
+    
+    # this dictionary is passed to the FindIntersection method below
+    return {"norm":normToDetect, "dist":distToDetect, "v":detV, 
+            "w":detW, "width":detWidth, "height":detHeight}
 
+# get the four corners, for drawing purposes
+def getDetectorCorners(ddict):
+    center = ddict['norm']*ddict['dist']
+    w = ddict['w']
+    v = ddict['v']
+    width = ddict['width']
+    height = ddict['height']
 
+    c1 = center + w*width/2 + v*height/2
+    c2 = center + w*width/2 - v*height/2
+    c3 = center - w*width/2 - v*height/2
+    c4 = center - w*width/2 + v*height/2
+
+    return c1,c2,c3,c4
 
 
 

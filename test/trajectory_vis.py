@@ -55,7 +55,7 @@ nsteps = 700
 trajs = [None for i in init_p]
 for i in range(len(init_p)):
     x0 = np.array([0,0,0]+init_p[i])
-    trajs[i] = Integrator.rk4(x0, Integrator.traverseBField, dt, nsteps)
+    trajs[i] = Integrator.rk4(x0, dt, nsteps)
 
 fig = plt.figure(1, figsize=(14.5,5.5))
 
