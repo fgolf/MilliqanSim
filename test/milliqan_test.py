@@ -11,8 +11,9 @@
 ## use mode "STATS" to collect statistics on particle hits on the detector, and output
 ## to a text file
 ##
-## The output format is (Q,p,pT,eta,phi,theta,thetaW,thetaV,w,v,pInt), one per column
+## The output format is (Q,m,p,pT,eta,phi,theta,thetaW,thetaV,w,v,pInt), one per column
 ##  -Q is the charge (program randomly chooses each to be pos/neg)
+##  -m is the particle mass
 ##  -p/pT are the initial (transverse) momentum in MeV
 ##  -eta/phi are the initial eta/phi of the particle
 ##  -theta is the of incidence on the detector plane, w.r.t. the normal
@@ -34,7 +35,7 @@ import Detector
 import Drawing
 
 # do you want to VISualize, or collect STATS?
-mode = "VIS"
+mode = "STATS"
 
 if mode=="VIS":
     ntrajs = 10
@@ -148,10 +149,10 @@ while len(trajs)<ntrajs:
                 trajs.append(traj)
             else:
                 trajs.append(0)
-            w = np.dot(intersection, detW)
-            v = np.dot(intersection, detV)
+            w = np.dot(intersection, detectorDict['w'])
+            v = np.dot(intersection, detectorDict['v'])
             txtfile = open(outname,'a')
-            txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\n".format(Params.Q,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,pInt))
+            txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\t{11:f}\n".format(Params.Q,Params.m,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,pInt))
 
 print "Efficiency:", float(len(intersects))/ntotaltrajs
 

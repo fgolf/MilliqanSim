@@ -71,5 +71,5 @@ Otherwise, the trajectory stops after the particle reaches a distance `cutoff` a
 
 The return value of `Integrator.rk4` is a 6-by-(nsteps+1) array. Each column contains (x,y,z,px,py,pz) at a specific timestep.
 
-The `Detector.FindIntersection` method takes the trajectory array defined above and comptes statistics on the intersection with
+The `Detector.FindIntersection` method takes the trajectory array defined above and computes statistics on the intersection with
 and external plane. See `src/Detector.py` and `test/milliqan_test.py` for instructions on how to use and descriptions of the return variables.
