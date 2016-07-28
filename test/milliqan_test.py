@@ -33,6 +33,7 @@ import Params
 import Integrator
 import Detector
 import Drawing
+from MilliTree import MilliTree
 
 # do you want to VISualize, or collect STATS?
 mode = "STATS"
@@ -43,8 +44,10 @@ if mode=="VIS":
 if mode=="STATS":
     # in STATS mode, this is the number of hits on the detector to generate
     # the total number of trajectories simulated will be greater
-    ntrajs = 100
+    ntrajs = 20
     trajs = []
+    print "Simulating {0} hits on the detector.".format(ntrajs)
+    print 
 
 visWithStats = False
 
@@ -54,6 +57,9 @@ except:
     pass
 
 outname = "../output_data/test.txt"
+
+if mode=="STATS":
+    print "Outputting to "+outname
 
 # must run at the beginning of main script. Loads the B field map into memory
 Detector.LoadCoarseBField("../bfield/bfield_coarse.pkl")
@@ -78,17 +84,19 @@ pt_dist = rootfile.Get("pt")
 
 
 dt = 0.2
-nsteps = 500  # 0.2 ns * c * 700 = 30 m maximum, more than enough
+nsteps = 2000  # 0.2 ns * c * 700 = 30 m maximum, more than enough
 
 ## set up detector. This is a much closer and enlarged version of
 ## the detector for illustrative purposes.
-detectorDict = Detector.getMilliqanDetector(distance=9.0, width=3.0)
+detectorDict = Detector.getMilliqanDetector(distance=33.0, width=1.0)
 
 # the four corners (only for drawing)
 c1,c2,c3,c4 = Detector.getDetectorCorners(detectorDict)
 
 intersects = []
 ntotaltrajs = 0
+
+mt = MilliTree()
 
 if mode=="STATS":
     # if file already exists, check if we want to overwrite or append
@@ -110,8 +118,8 @@ while len(trajs)<ntrajs:
     magp = ROOT.Double(-1)
     eta = ROOT.Double(-1)
 
-    etalow =  -0.2
-    etahigh =  0.2
+    etalow =  -0.06
+    etahigh =  0.06
 
     # draw random pT values from the distribution. Set minimum at 10 GeV
     while magp<10:
@@ -122,7 +130,7 @@ while len(trajs)<ntrajs:
 
     th = 2*np.arctan(np.exp(-eta))
     magp = magp/np.sin(th)
-    phimin, phimax =  -0.3,0.3
+    phimin, phimax =  -0.04,0.06
     phi = np.random.rand() * (phimax-phimin) + phimin
     Params.Q *= np.random.randint(2)*2 - 1
     phi *= Params.Q/abs(Params.Q)
@@ -132,7 +140,7 @@ while len(trajs)<ntrajs:
     x0 = np.array([0,0,0,p[0],p[1],p[2]])
     
     # simulate until nsteps steps is reached, or the particle passes x=10
-    traj = Integrator.rk4(x0, dt, nsteps, cutoff=10, cutoffaxis=0)
+    traj = Integrator.rk4(x0, dt, nsteps, cutoff=35, cutoffaxis=0)
     ntotaltrajs += 1
     if mode=="VIS":
         trajs.append(traj)
@@ -151,10 +159,15 @@ while len(trajs)<ntrajs:
                 trajs.append(0)
             w = np.dot(intersection, detectorDict['w'])
             v = np.dot(intersection, detectorDict['v'])
+            magpint = np.linalg.norm(pInt)
             txtfile = open(outname,'a')
-            txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\t{11:f}\n".format(Params.Q,Params.m,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,pInt))
+            txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\t{11:f}\n".format(Params.Q,Params.m,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,magpint))
+            mt.SetValues(intersection, pInt)
+            mt.Fill()
 
 print "Efficiency:", float(len(intersects))/ntotaltrajs
+
+mt.Write("../output_data/test.root")
 
 if mode=="VIS" or visWithStats:
     plt.figure(num=1, figsize=(15,7))
