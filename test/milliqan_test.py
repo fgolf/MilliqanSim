@@ -25,7 +25,9 @@
 ## To get more useful variables, run the tools/formatOutput.py script.
 
 import math
+import time
 import os.path
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import ROOT
@@ -34,29 +36,33 @@ import Integrator
 import Detector
 import Drawing
 from MilliTree import MilliTree
+import run_params as rp
 
 # do you want to VISualize, or collect STATS?
-mode = "STATS"
+mode = rp.mode
 
 if mode=="VIS":
-    ntrajs = 10
+    ntrajs = rp.ntrajs
     trajs = []
 if mode=="STATS":
     # in STATS mode, this is the number of hits on the detector to generate
     # the total number of trajectories simulated will be greater
-    ntrajs = 20
+    ntrajs = rp.ntrajs
     trajs = []
     print "Simulating {0} hits on the detector.".format(ntrajs)
     print 
 
 visWithStats = False
 
-try:
-    os.makedirs("../output_data")
-except:
-    pass
+suffix = sys.argv[1]
 
-outname = "../output_data/test.txt"
+# try:
+#     os.makedirs("../output_data")
+# except:
+#     pass
+
+# outname = "../output_data/test.txt"
+outname = "../output_{0}.txt".format(suffix)
 
 if mode=="STATS":
     print "Outputting to "+outname
@@ -67,28 +73,38 @@ Detector.LoadCoarseBField("../bfield/bfield_coarse.pkl")
 # turn on CMS magnetic field and PDG multiple scattering
 Params.BFieldType = 'cms'
 Params.MSCtype = 'pdg'
+Params.MatSetup='cms'
 # turn on dE/dx energy loss (Bethe-Bloch)
 Params.EnergyLossOn = True
 # charge and mass of the particle. Q in units of electric charge, m in MeV
-Params.Q = 0.1
-Params.m = 52500.
+Params.Q = rp.particleQ
+Params.m = rp.particleM
 #suppress annoying warnings
 Params.SuppressStoppedWarning = True
+Params.RockBegins = rp.rockBegins
 
 # make sure numbers are new each run
 ROOT.gRandom.SetSeed(0)
 
-rootfile = ROOT.TFile("../p_eta_dist/kin_dist.MilliQ.UFO.14TeV.52.50.root")
+rootfile = ROOT.TFile(rp.pt_spect_filename)
 # this is a 1D pT distribution (taken from small-eta events)
 pt_dist = rootfile.Get("pt")
 
+dt = rp.dt
+nsteps = rp.nsteps
 
-dt = 0.2
-nsteps = 2000  # 0.2 ns * c * 700 = 30 m maximum, more than enough
+center = rp.centerOfDetector
+distToDetect = np.linalg.norm(center)
+normToDetect = center/distToDetect
 
-## set up detector. This is a much closer and enlarged version of
-## the detector for illustrative purposes.
-detectorDict = Detector.getMilliqanDetector(distance=33.0, width=1.0)
+detV = np.array([0., 1., 0.])
+detW = np.cross(normToDetect, detV)
+
+detWidth = rp.detWidth
+detHeight = rp.detHeight
+
+detectorDict = {"norm":normToDetect, "dist":distToDetect, "v":detV, 
+            "w":detW, "width":detWidth, "height":detHeight}
 
 # the four corners (only for drawing)
 c1,c2,c3,c4 = Detector.getDetectorCorners(detectorDict)
@@ -113,16 +129,18 @@ if mode=="STATS":
         txtfile = open(outname,'w')
     txtfile.close()
 
+starttime = time.time()
+
 # loop until we get ntrajs trajectories (VIS) or hits (STATS)
 while len(trajs)<ntrajs:
     magp = ROOT.Double(-1)
     eta = ROOT.Double(-1)
 
-    etalow =  -0.06
-    etahigh =  0.06
+    etalow =  rp.etabounds[0]
+    etahigh =  rp.etabounds[1]
 
     # draw random pT values from the distribution. Set minimum at 10 GeV
-    while magp<10:
+    while magp < rp.ptCut:
         magp = pt_dist.GetRandom()
 
     # eta distribution is uniform for small eta
@@ -130,9 +148,9 @@ while len(trajs)<ntrajs:
 
     th = 2*np.arctan(np.exp(-eta))
     magp = magp/np.sin(th)
-    phimin, phimax =  -0.04,0.06
+    phimin, phimax =  rp.phibounds
     phi = np.random.rand() * (phimax-phimin) + phimin
-    Params.Q *= np.random.randint(2)*2 - 1
+    Params.Q *= np.random.randint(2)*2 - 1 
     phi *= Params.Q/abs(Params.Q)
 
     # convert to cartesian momentum
@@ -140,7 +158,7 @@ while len(trajs)<ntrajs:
     x0 = np.array([0,0,0,p[0],p[1],p[2]])
     
     # simulate until nsteps steps is reached, or the particle passes x=10
-    traj = Integrator.rk4(x0, dt, nsteps, cutoff=35, cutoffaxis=0)
+    traj = Integrator.rk4(x0, dt, nsteps, cutoff=35, cutoffaxis=3)
     ntotaltrajs += 1
     if mode=="VIS":
         trajs.append(traj)
@@ -165,9 +183,24 @@ while len(trajs)<ntrajs:
             mt.SetValues(intersection, pInt)
             mt.Fill()
 
-print "Efficiency:", float(len(intersects))/ntotaltrajs
+endtime = time.time()
 
-mt.Write("../output_data/test.root")
+print "Efficiency:", float(len(intersects))/ntotaltrajs
+print "Total time: {0:.2f} sec".format(endtime-starttime)
+print "Time/Hit: {0:.2f} sec".format((endtime-starttime)/ntrajs)
+
+mt.Write("../output_{0}.root".format(suffix))
+
+fid = ROOT.TFile("../output_{0}.root".format(suffix), "UPDATE")
+
+hhits = ROOT.TH1F("hhits","",1,0,2)
+hsims = ROOT.TH1F("hsims","",1,0,2)
+hhits.Fill(1, ntrajs)
+hsims.Fill(1, ntotaltrajs)
+hhits.Write()
+hsims.Write()
+
+fid.Close()
 
 if mode=="VIS" or visWithStats:
     plt.figure(num=1, figsize=(15,7))

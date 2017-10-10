@@ -91,8 +91,8 @@ def getMaterial(x,y,z):
     else:
         mat = 'air'
 
-    if x>16.5:
-        mat = 'concrete'
+    if np.sqrt(r**2+z**2)>Params.RockBegins:
+        mat = 'rock'
 
     return mat
     

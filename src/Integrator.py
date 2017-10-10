@@ -110,7 +110,7 @@ def rk4(x0, dt, nsteps, update_func=traverseBField,  cutoff=None, cutoffaxis=Non
         if Params.EnergyLossOn:
             x[:,i+1] = doEnergyLoss(x[:,i+1], dt)
         if not Params.SuppressStoppedWarning and np.all(x[:,i+1]==0):
-            print "Warning: stopped particle! (initial p =", round(np.linalg.norm(x[3:,0])/1000,2), "GeV)"
+            print "Warning: stopped particle! (initial p ={0:.2f}, at r = {1:.2f})".format(np.linalg.norm(x[3:,0])/1000, np.linalg.norm(x[:3,i]))
 
         # check if particle has stopped
         if np.all(x[:,i+1]==0):

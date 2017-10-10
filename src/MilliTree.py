@@ -18,6 +18,8 @@ class MilliTree:
         self.px = 0.
         self.py = 0.
         self.pz = 0.
+        self.numHits = 0
+        self.numSims = 0
 
         self._Bfield = ROOT.std.string()
         self._MatSetup = ROOT.std.string()
@@ -64,7 +66,7 @@ class MilliTree:
         self.tree.Fill()
 
     # pass the output of Detector.FindIntersection to this, and it will populate the tree values
-    def SetValues(self,  intersect, pInt):
+    def SetValues(self, intersect, pInt):
         self.Bfield = Params.BFieldType
         self.MatSetup = Params.MatSetup
         self.MSCtype = Params.MSCtype

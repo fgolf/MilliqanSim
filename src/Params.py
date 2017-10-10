@@ -10,14 +10,16 @@ materials = { "fe"   : (26, 55.845, 7.874, .01757),
               "si"   : (14, 28.0855, 2.329, .0937),
               "air"  : (7.34, 14.719, 1.205e-3, 3.04e2),  
               "pbwo4": (31.3, 75.8, 8.3, 0.008903),
-              "concrete": (11.10, 22.08, 2.3, .1155)  }
+              "concrete": (11.10, 22.08, 2.3, .1155),
+              "rock": (11.0, 22.0, 2.65, .1002)  }
 
 ## parameters for dEdx (I, a, k, x0, x1, Cbar, delta0)
 dEdx_params = { "fe"   : (286.0, 0.14680, 2.9632, -0.0012, 3.1531, 4.2911, 0.12),
                 "si"   : (173.0, 0.14921, 3.2546, 0.2015, 2.8716, 4.4355, 0.14),
                 "air"  : (85.7, 0.10914, 3.3994, 1.7418, 4.2759, 10.5961, 0.0),
                 "pbwo4": (600.7, 0.22758, 3.0, 0.4068, 3.0023, 5.8528, 0.0),
-                "concrete": (135.2, .07515, 3.5467, .1301, 3.0466, 3.9464, 0.0) }
+                "concrete": (135.2, .07515, 3.5467, .1301, 3.0466, 3.9464, 0.0),
+                "rock": (136.4, .08301, 3.4210, .0492, 3.0549, 3.7738, 0.0) }
 
 ## these may be updated in main program
 Q = 1  ## in units of e
@@ -31,6 +33,7 @@ BFieldType = 'CMS'
 BFieldUsePickle = True
 UseFineBField = False
 MatSetup = 'cms'
+RockBegins = 999999.  #past this distance from IP, solid concrete
 Interpolate = True
 
 ## internal parameters. don't touch
