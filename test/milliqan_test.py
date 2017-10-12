@@ -63,6 +63,7 @@ suffix = sys.argv[1]
 
 # outname = "../output_data/test.txt"
 outname = "../output_{0}.txt".format(suffix)
+outnameCustom = "../customOutput_{0}.txt".format(suffix)
 
 if mode=="STATS":
     print "Outputting to "+outname
@@ -81,7 +82,10 @@ Params.Q = rp.particleQ
 Params.m = rp.particleM
 #suppress annoying warnings
 Params.SuppressStoppedWarning = True
-Params.RockBegins = rp.rockBegins
+Params.RockBegins = rp.RockBegins
+
+if rp.useCustomMaterialFunction:
+    Params.matFunction = rp.matFunction
 
 # make sure numbers are new each run
 ROOT.gRandom.SetSeed(0)
@@ -91,7 +95,7 @@ rootfile = ROOT.TFile(rp.pt_spect_filename)
 pt_dist = rootfile.Get("pt")
 
 dt = rp.dt
-nsteps = rp.nsteps
+nsteps = rp.max_nsteps
 
 center = rp.centerOfDetector
 distToDetect = np.linalg.norm(center)
@@ -122,12 +126,21 @@ if mode=="STATS":
             ow = raw_input("Overwrite file? (y/n) ")
         if ow in 'yY':
             txtfile = open(outname,'w')
+            if rp.useCustomOutput:
+                txtfile2 = open(outnameCustom, 'w')
         else:
             print "OK, appending"
             txtfile = open(outname,'a')
+            if rp.useCustomOutput:
+                txtfile2 = open(outnameCustom, 'a')
     else:
         txtfile = open(outname,'w')
+        if rp.useCustomOutput:
+            txtfile2 = open(outnameCustom, 'w')
     txtfile.close()
+    if rp.useCustomOutput:
+        txtfile2.close()
+
 
 starttime = time.time()
 
@@ -158,7 +171,7 @@ while len(trajs)<ntrajs:
     x0 = np.array([0,0,0,p[0],p[1],p[2]])
     
     # simulate until nsteps steps is reached, or the particle passes x=10
-    traj = Integrator.rk4(x0, dt, nsteps, cutoff=35, cutoffaxis=3)
+    traj = Integrator.rk4(x0, dt, nsteps, cutoff=rp.cutoff, cutoffaxis=3)
     ntotaltrajs += 1
     if mode=="VIS":
         trajs.append(traj)
@@ -180,6 +193,11 @@ while len(trajs)<ntrajs:
             magpint = np.linalg.norm(pInt)
             txtfile = open(outname,'a')
             txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\t{11:f}\n".format(Params.Q,Params.m,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,magpint))
+            txtfile.close()
+            if rp.useCustomOutput:
+                txtfile = open(outnameCustom, 'a')
+                txtfile.write("\t".join(str(x) for x in rp.outputFunction(traj, detectorDict)) + '\n')
+                txtfile.close()
             mt.SetValues(intersection, pInt)
             mt.Fill()
 
@@ -219,5 +237,10 @@ if mode=="VIS" or visWithStats:
 
     plt.figure(num=2)
     Drawing.DrawXZslice(trajs)
+
+    plt.figure(3)
+    rvals = np.linalg.norm(trajs[0][:3,:], axis=0)
+    pvals = np.linalg.norm(trajs[0][3:,:], axis=0)
+    plt.plot(rvals,pvals)
 
     plt.show()

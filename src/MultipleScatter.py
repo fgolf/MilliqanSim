@@ -43,7 +43,7 @@ def getNormVector(v):
 
 def getKuhnScatteringParams(x, dt):
 
-    mat = Detector.getMaterial(x[0],x[1],x[2])
+    mat = Params.matFunction(x[0],x[1],x[2])
 
     Z,A,rho,X0 = Params.materials[mat]
 
@@ -110,9 +110,8 @@ def getScatterAngleKuhn(x, dt):
 def multipleScatterKuhn(x, dt):
     # use the method from Kuhn paper
 
-    if Detector.getMaterial(x[0],x[1],x[2])=='air':
+    if Params.matFunction(x[0],x[1],x[2])=='air':
         return np.zeros(6)
-
 
     p = x[3:]
     theta = getScatterAngleKuhn(x, dt)
@@ -150,7 +149,7 @@ def getScatterAnglePDG(x, dt):
     ## and transverse displacement y for the given momentum. This is taken
     ## from the PDG review chapter on the Passage of Particles through Matter
 
-    mat = Detector.getMaterial(x[0],x[1],x[2])
+    mat = Params.matFunction(x[0],x[1],x[2])
 
     X0 = Params.materials[mat][3]
 
@@ -181,7 +180,7 @@ def multipleScatterPDG(x, dt):
     # get the angles/displacements from above function and return the
     # net change in x=(x,y,z,px,py,pz)
 
-    if Detector.getMaterial(x[0],x[1],x[2])=='air':
+    if Params.matFunction(x[0],x[1],x[2])=='air':
         return np.zeros(6)
 
     p = x[3:]
