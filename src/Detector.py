@@ -170,7 +170,7 @@ def getBField(x,y,z):
     else:
         return np.zeros(3)
 
-def FindIntersection(traj, detectorDict):
+def FindIntersection(traj, tvec, detectorDict):
     # find the intersection with a plane with normal norm
     # and distance to origin dist. returns None if no intersection
 
@@ -186,7 +186,8 @@ def FindIntersection(traj, detectorDict):
         if proj2>=dist:
             proj1 = np.dot(p1,norm)
             intersect = p1+(dist-proj1)/(proj2-proj1)*(p2-p1)
-
+            t = tvec[i] + (dist-proj1)/(proj2-proj1) * (tvec[i+1] - tvec[i])
+            
             vHat = detectorDict["v"]
             wHat = detectorDict["w"]
             center = norm*dist
@@ -208,11 +209,11 @@ def FindIntersection(traj, detectorDict):
                 # momentum when it hits detector
                 pInt = traj[3:,i]
 
-                return intersect,theta,thW,thV,pInt
+                return intersect,t,theta,thW,thV,pInt
 
             break
 
-    return None, None, None, None, None
+    return None, None, None, None, None, None
 
 
 def getMilliqanDetector(distance=33.0, width=1.):

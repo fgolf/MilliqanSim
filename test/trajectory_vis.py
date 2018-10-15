@@ -6,12 +6,17 @@
 ##   -"XY" slice - looking at CMS from the endcap. Get classic S-shape trajectories
 ##   - 3D view - a rotatable 3D visualization of the trajectories
 
+import sys
+try:
+    sys.path.remove('/home/users/bemarsh/.local/lib/python2.7/site-packages/matplotlib-1.4.3-py2.7-linux-x86_64.egg')
+except:
+    pass
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import Params
 import Integrator
 import Detector
-import Params
 import Drawing
 
 ## this must be present at the beginning of the main script
@@ -33,11 +38,11 @@ Params.EnergyLossOn=True
 # define the initial momenta (in MeV)
 # just define 5 for now, all in the +x direction
 init_p = []
-init_p.append([2000,0,0])
-init_p.append([3000,0,0])
-init_p.append([5000,0,0])
-init_p.append([10000,0,0])
-init_p.append([20000,0,0])
+init_p.append([2000* np.cos( 0*np.pi/180),0,2000* np.sin( 0*np.pi/180)])
+init_p.append([3000* np.cos(10*np.pi/180),0,3000* np.sin(10*np.pi/180)])
+init_p.append([5000* np.cos(20*np.pi/180),0,5000* np.sin(20*np.pi/180)])
+init_p.append([10000*np.cos(30*np.pi/180),0,10000*np.sin(30*np.pi/180)])
+init_p.append([20000*np.cos(40*np.pi/180),0,20000*np.sin(40*np.pi/180)])
 
 colors = ['r', 'g', 'b', 'c', 'm']
 print 'Initial Momenta (colors r,g,b,c):'

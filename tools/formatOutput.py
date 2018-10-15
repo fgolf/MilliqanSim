@@ -13,6 +13,7 @@ distanceToDetector = 33.
 
 if len(sys.argv) < 3:
     print "usage: python formatOutput.py <input file> <output_file>"
+    exit(1)
 
 fout = open(sys.argv[2],'w')
 

@@ -28,6 +28,10 @@ import math
 import time
 import os.path
 import sys
+try:
+    sys.path.remove('/home/users/bemarsh/.local/lib/python2.7/site-packages/matplotlib-1.4.3-py2.7-linux-x86_64.egg')
+except:
+    pass
 import numpy as np
 import matplotlib.pyplot as plt
 import ROOT
@@ -72,7 +76,7 @@ if mode=="STATS":
 Detector.LoadCoarseBField("../bfield/bfield_coarse.pkl")
 
 # turn on CMS magnetic field and PDG multiple scattering
-Params.BFieldType = 'cms'
+Params.BFieldType = rp.BFieldType
 Params.MSCtype = 'pdg'
 Params.MatSetup='cms'
 # turn on dE/dx energy loss (Bethe-Bloch)
@@ -81,7 +85,7 @@ Params.EnergyLossOn = True
 Params.Q = rp.particleQ
 Params.m = rp.particleM
 #suppress annoying warnings
-Params.SuppressStoppedWarning = True
+Params.SuppressStoppedWarning = False
 Params.RockBegins = rp.RockBegins
 
 if rp.useCustomMaterialFunction:
@@ -95,7 +99,7 @@ rootfile = ROOT.TFile(rp.pt_spect_filename)
 pt_dist = rootfile.Get("pt")
 
 dt = rp.dt
-nsteps = rp.max_nsteps
+nsteps = rp.max_nsteps    
 
 center = rp.centerOfDetector
 distToDetect = np.linalg.norm(center)
@@ -106,9 +110,10 @@ detW = np.cross(normToDetect, detV)
 
 detWidth = rp.detWidth
 detHeight = rp.detHeight
+detDepth = rp.detDepth
 
 detectorDict = {"norm":normToDetect, "dist":distToDetect, "v":detV, 
-            "w":detW, "width":detWidth, "height":detHeight}
+            "w":detW, "width":detWidth, "height":detHeight, "depth":detDepth}
 
 # the four corners (only for drawing)
 c1,c2,c3,c4 = Detector.getDetectorCorners(detectorDict)
@@ -160,7 +165,7 @@ while len(trajs)<ntrajs:
     eta = np.random.rand()*(etahigh-etalow) + etalow
 
     th = 2*np.arctan(np.exp(-eta))
-    magp = magp/np.sin(th)
+    # magp = magp/np.sin(th)
     phimin, phimax =  rp.phibounds
     phi = np.random.rand() * (phimax-phimin) + phimin
     Params.Q *= np.random.randint(2)*2 - 1 
@@ -171,13 +176,18 @@ while len(trajs)<ntrajs:
     x0 = np.array([0,0,0,p[0],p[1],p[2]])
     
     # simulate until nsteps steps is reached, or the particle passes x=10
-    traj = Integrator.rk4(x0, dt, nsteps, cutoff=rp.cutoff, cutoffaxis=3)
+    traj,tvec = Integrator.rk4(x0, dt, nsteps, cutoff=rp.cutoff, cutoffaxis=3, use_var_dt=rp.use_var_dt)
     ntotaltrajs += 1
     if mode=="VIS":
         trajs.append(traj)
 
+    # print np.linalg.norm(traj[:3,-1]), np.linalg.norm(traj[3:,-1])
+
     # compute the intersection. Will return None if no intersection
-    intersection, theta, thW, thV, pInt = Detector.FindIntersection(traj, detectorDict)
+    findIntersection = Detector.FindIntersection
+    if rp.useCustomIntersectionFunction:
+        findIntersection = rp.intersectFunction
+    intersection, t, theta, thW, thV, pInt = findIntersection(traj, tvec, detectorDict)
     if intersection is not None:
         intersects.append(intersection)
         print len(trajs), ": p =",magp, ", eta =", eta, ", phi =", phi, ", eff =", float(len(intersects))/ntotaltrajs
@@ -192,7 +202,7 @@ while len(trajs)<ntrajs:
             v = np.dot(intersection, detectorDict['v'])
             magpint = np.linalg.norm(pInt)
             txtfile = open(outname,'a')
-            txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\t{11:f}\n".format(Params.Q,Params.m,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,magpint))
+            txtfile.write("{0:f}\t{1:f}\t{2:f}\t{3:f}\t{4:f}\t{5:f}\t{6:f}\t{7:f}\t{8:f}\t{9:f}\t{10:f}\t{11:f}\t{12:f}\n".format(t,Params.Q,Params.m,magp,magp*np.sin(th),eta,phi,theta,thW,thV,w,v,magpint))
             txtfile.close()
             if rp.useCustomOutput:
                 txtfile = open(outnameCustom, 'a')
