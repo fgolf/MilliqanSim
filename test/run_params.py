@@ -1,6 +1,6 @@
 import numpy as np
 
-mode = "STATS"
+mode = "VIS"
 ntrajs = 1
 pt_spect_filename = "../p_eta_dist/combined_PtSpect_Eta0p16.root"
 dt = 0.1   #timestep in ns
@@ -9,8 +9,10 @@ cutoff = 34.
 use_var_dt = False
 BFieldType = "cms"
 
-particleQ = 1.0  # in electron charge units
-particleM = 105. # in MEV
+#particleQ = 1.0  # in electron charge units
+#particleM = 105. # in MEV
+particleQ = 0.01  # in electron charge units
+particleM = 50. # in MEV
 
 distToDetector = 33.
 eta = 0.16
@@ -33,3 +35,5 @@ phibounds = (0.00, 0.22)
 useCustomMaterialFunction = False
 useCustomIntersectionFunction = False
 useCustomOutput = False
+
+infile = "/Users/fgolf/Dropbox/milliQan/sim/Milliqan-Pythia-Simulation/out.root"
